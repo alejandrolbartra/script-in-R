@@ -1,0 +1,89 @@
+## BLANCHET'S MATRIX "E" >>> BME object
+
+library(riverdist)
+
+# B = result of 'line2network' function
+# C = cleanup(B)
+# E := rivernetwork from "riverdist" ( = buildsegroutes(C) )
+# cordUTM := coordenades UTM from sampling sites (dataframe or matrix)
+
+
+coordriv<-xy2segvert(x=cord.UTM$coords.x1,y=cord.UTM$coords.x2,rivers=E)
+
+F<-E
+coordrivnovo<-coordriv
+
+a<-as.numeric()
+for(i in 1:length(E$lines)){
+a[i]<-nrow(E$lines[[i]])
+}
+d<-length(which(coordriv$vert>1 & coordriv$vert<a[coordriv$seg]))
+
+for(i in 1:d){
+
+	a<-as.numeric()
+	for(i in 1:length(F$lines)){
+	a[i]<-nrow(F$lines[[i]])
+	}
+
+	b<-min(which(coordrivnovo$vert>1 & coordrivnovo$vert<a[coordrivnovo$seg]))
+	F<-splitsegmentat(coordrivnovo$seg[b],coordrivnovo$vert[b],F)
+	coordrivnovo<-xy2segvert(x=cord.UTM$coords.x1,y=cord.UTM$coords.x2,rivers=F)
+
+}
+
+names(F)
+F$segroutes
+
+crdriv1<-xy2segvert(x=cord.UTM$coords.x1,y=cord.UTM$coords.x2,rivers=F)
+crdriv<-matrix(NA,ncol=2,nrow=nrow(crdriv1))
+
+for(i in 1:nrow(crdriv)){
+crdriv[i,]<-F$lines[[crdriv1$seg[i]]][crdriv1$vert[i],]
+}
+crdriv<-cbind(crdriv[,1],round(crdriv[,2],0))
+
+a<-as.numeric()
+for(i in 1:length(F$segroutes)){
+a[i]<-length(F$segroutes[[i]])
+}
+b<-cbind(a-1,a)
+
+ef<-matrix(NA,ncol=8,nrow=length(F$lines))
+
+for(i in 1:length(F$segroutes)){  #sites should not to be in the mouth segment,
+				  #if any were, NA's will be showed in the ef matrix
+				  #after the for function	
+if(i==F$mouth$mouth.seg){
+ef[i,]=rep(NA,8)
+	}else{
+
+d<-F$segroutes[[i]][b[i,]]
+e<-as.matrix(F$lines[[d[1]]])
+f<-as.matrix(F$lines[[d[2]]])
+e1<-c(e[1,1],round(e[1,2],0))
+f1<-c(f[1,1],round(f[1,2],0))
+e2<-c(e[nrow(F$lines[[d[1]]]),1],round(e[nrow(F$lines[[d[1]]]),2],0))
+f2<-c(f[nrow(F$lines[[d[2]]]),1],round(f[nrow(F$lines[[d[2]]]),2],0))
+
+ef[i,]<-c(e1,e2,f1,f2)
+	}
+}
+ef<-ef[crdriv1$seg,]
+
+sign<-as.numeric()
+for(i in 1:length(ef)){
+sign[i]<-sum(c(crdriv[1,]==ef[1,1:2],crdriv[1,]==ef[1,3:4],crdriv[1,]==ef[1,5:6],
+	crdriv[1,]==ef[1,7:8]))
+}
+sign
+
+#building the E matrix, BME object
+
+BME<-matrix(0,nrow=nrow(ef),ncol=length(F$lines))
+
+for(i in 1:nrow(ef)){
+a<-crdriv1$seg[i]
+BME[i,F$segroutes[[a]]]<-1
+}
+BME
