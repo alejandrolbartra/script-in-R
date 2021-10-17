@@ -87,3 +87,70 @@ a<-crdriv1$seg[i]
 BME[i,F$segroutes[[a]]]<-1
 }
 BME
+
+# W matrix with the weights related to the watercourse distance
+# the transformation were done based on Blanchet et al (2011)
+
+weigth<- 1-(F$lengths/max(F$lengths))^2 # f1 with alpha = 2
+weigth1<- 1-(F$lengths/max(F$lengths))   # f1 with alpha = 1
+weigth2<- (1/F$lengths)^2 		    # f2 with alpha = 2
+weigth3<- (1/F$lengths)^2 		    # f2 with alpha = 1
+
+# E matrix * weights 
+
+BMElengths<-BME
+for(i in 1:ncol(BME)){
+BMElengths[,i]<-BME[,i]*weigth[i]
+}
+
+BMElengths1<-BME
+for(i in 1:ncol(BME)){
+BMElengths1[,i]<-BME[,i]*weigth1[i]
+}
+
+BMElengths2<-BME
+for(i in 1:ncol(BME)){
+BMElengths2[,i]<-BME[,i]*weigth2[i]
+}
+
+BMElengths3<-BME
+for(i in 1:ncol(BME)){
+BMElengths3[,i]<-BME[,i]*weigth3[i]
+}
+
+
+# pcoa ( E matrix * weights )
+
+crdBME<-pcoa(dist(BMElengths, method="euclidean"))
+crdBME1<-pcoa(dist(BMElengths1, method="euclidean"))
+crdBME2<-pcoa(dist(BMElengths2, method="euclidean")) #show error
+crdBME3<-pcoa(dist(BMElengths3, method="euclidean")) "show error
+
+#Selecting the spatial eigenvectors
+
+all.spatialAEM<-crdBME$vectors
+all.spatialAEM1<-crdBME1$vectors
+
+# calculating the global RDA for each group of AEM
+# first 29 AEM = positive spatial autocorrelation
+# last 29 AEM = negative spatial autocorrelation
+
+rda.AEMb<-rda(abuH~all.spatialAEM[,1:29])
+anova(rda.AEMb) # pvalue tem q ser menor a 0.025
+R2adjAEMb<-RsquareAdj(rda.AEMb)$adj.r.squared
+forspab<-forward.sel(abuH,all.spatialAEM[,1:29],adjR2thresh=R2adjAEMb)
+
+rda.AEMf<-rda(abuH~all.spatialAEM[,30:58])
+anova(rda.AEMf)
+R2adjAEMf<-RsquareAdj(rda.AEMf)$adj.r.squared ## Radj fica negativo
+#forspaf<-forward.sel(abuH,all.spatialAEM[,30:58],adjR2thresh=R2adjAEMf)
+
+rda.AEMb1<-rda(abuH~all.spatialAEM1[,1:29])
+anova(rda.AEMb1) # pvalue tem q ser menor a 0.025
+R2adjAEMb1<-RsquareAdj(rda.AEMb1)$adj.r.squared
+forspab1<-forward.sel(abuH,all.spatialAEM[,1:29],adjR2thresh=R2adjAEMb1)
+
+rda.AEMf1<-rda(abuH~all.spatialAEM1[,30:58])
+anova(rda.AEMf1)
+R2adjAEMf1<-RsquareAdj(rda.AEMf1)$adj.r.squared ## Radj fica negativo
+#forspaf1<-forward.sel(abuH,all.spatialAEM[,30:58],adjR2thresh=R2adjAEMf1) 
