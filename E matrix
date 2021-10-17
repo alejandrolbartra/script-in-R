@@ -123,8 +123,8 @@ BMElengths3[,i]<-BME[,i]*weigth3[i]
 
 crdBME<-pcoa(dist(BMElengths, method="euclidean"))
 crdBME1<-pcoa(dist(BMElengths1, method="euclidean"))
-crdBME2<-pcoa(dist(BMElengths2, method="euclidean")) #show error
-crdBME3<-pcoa(dist(BMElengths3, method="euclidean")) "show error
+crdBME2<-pcoa(dist(BMElengths2, method="euclidean")) # "error"
+crdBME3<-pcoa(dist(BMElengths3, method="euclidean")) # "error"
 
 #Selecting the spatial eigenvectors
 
