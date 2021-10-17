@@ -136,21 +136,21 @@ all.spatialAEM1<-crdBME1$vectors
 # last 29 AEM = negative spatial autocorrelation
 
 rda.AEMb<-rda(abuH~all.spatialAEM[,1:29])
-anova(rda.AEMb) # pvalue tem q ser menor a 0.025
+anova(rda.AEMb) # pvalue must be less than 0.025
 R2adjAEMb<-RsquareAdj(rda.AEMb)$adj.r.squared
 forspab<-forward.sel(abuH,all.spatialAEM[,1:29],adjR2thresh=R2adjAEMb)
 
 rda.AEMf<-rda(abuH~all.spatialAEM[,30:58])
 anova(rda.AEMf)
-R2adjAEMf<-RsquareAdj(rda.AEMf)$adj.r.squared ## Radj fica negativo
+R2adjAEMf<-RsquareAdj(rda.AEMf)$adj.r.squared ## Radj is negative
 #forspaf<-forward.sel(abuH,all.spatialAEM[,30:58],adjR2thresh=R2adjAEMf)
 
 rda.AEMb1<-rda(abuH~all.spatialAEM1[,1:29])
-anova(rda.AEMb1) # pvalue tem q ser menor a 0.025
+anova(rda.AEMb1) # pvalue must be less than 0.025
 R2adjAEMb1<-RsquareAdj(rda.AEMb1)$adj.r.squared
 forspab1<-forward.sel(abuH,all.spatialAEM[,1:29],adjR2thresh=R2adjAEMb1)
 
 rda.AEMf1<-rda(abuH~all.spatialAEM1[,30:58])
 anova(rda.AEMf1)
-R2adjAEMf1<-RsquareAdj(rda.AEMf1)$adj.r.squared ## Radj fica negativo
+R2adjAEMf1<-RsquareAdj(rda.AEMf1)$adj.r.squared ## Radj is negative
 #forspaf1<-forward.sel(abuH,all.spatialAEM[,30:58],adjR2thresh=R2adjAEMf1) 
