@@ -1,0 +1,594 @@
+rm(list=ls())
+
+library(vegan)
+library(riverdist)
+#library(sp)
+library(rgdal)
+library(adespatial)
+#library(ade4)
+library(ape)
+
+#setwd("C:/Users/OMAR/Dropbox/tese D - Omar/Dados/analise cap 1/")
+
+dados<-read.table("dadosfinal9.04.2021.txt",sep="\t",head=T)
+head(dados)
+
+##coordenates
+#dados[,6:7]
+#plot(dados[,6:7])
+#ID<-1:59
+#write.table(cbind(ID,dados[,6:7]),"coordenadasTL.txt",sep="\t",col.names=T,row.names=F)
+
+coord<-dados[,6:7]
+
+env.is<-dados[,100:110]
+
+######################################################################
+############# espacial #############################################
+
+## citation of shapefile
+
+#Instituto Brasileiro de Geografia e Estatística (2016). Trecho Drenagem em 
+#Base Cartográfica Contínua do Brasil – 1:1 000 000. 5ª versão digital com 
+#banco de dados geográfico. Base Cartográfica Contínua do Brasil – 1:1 000 000.
+#Rio de Janeiro, Brasil.
+
+## Link
+
+#http://www.metadados.geo.ibge.gov.br/geonetwork_ibge/srv/por/metadata.show
+
+### Analysis
+
+#setwd("C:/Users/OMAR/Dropbox/tese D - Omar/Dados/analise cap 1/shape tesis D/analise/")
+
+B<-line2network(layer="corte2proj")
+#plot(B)
+C<-cleanup(B)
+y
+y
+y
+200
+104
+454
+y
+c
+167
+64
+c
+y
+c
+168
+80
+c
+y
+c
+171
+84
+c
+y
+c
+172
+84
+c
+y
+c
+173
+84
+c
+y
+c
+174
+31
+c
+y
+c
+176
+23
+c
+y
+c
+181
+153
+c
+y
+c
+183
+18
+c
+y
+c
+184
+131
+c
+y
+c
+185
+59
+c
+y
+c
+186
+57
+c
+y
+c
+187
+145
+c
+y
+c
+189
+16
+c
+y
+c
+190
+147
+c
+y
+c
+192
+144
+c
+y
+c
+194
+119
+c
+y
+c
+195
+130
+c
+y
+c
+197
+75
+c
+y
+c
+198
+102
+c
+y
+c
+199
+97
+c
+y
+c
+201
+117
+c
+y
+c
+202
+52
+c
+y
+c
+203
+53
+c
+y
+c
+206
+29
+c
+y
+c
+207
+28
+c
+y
+c
+208
+120
+c
+y
+c
+209
+13
+c
+y
+c
+210
+134
+c
+y
+c
+211
+139
+c
+y
+c
+212
+121
+c
+y
+c
+213
+124
+c
+y
+c
+216
+58
+c
+y
+n
+y
+
+plot(C)	# C esta composto de "vertices" e "segmentos"
+		# cada "segmento" está composto de varios "subvertices" e 
+		# "subsegmentos" (C$lines mostra as coordenadas de cada subvertice)
+
+
+# Cleanup completed, returning a network with 249 segments. 
+
+# Recommend saving output to a .Rdata or .rda file. 
+
+# Note: any point data already using the input river network must be 
+# re-transformed to river coordinates using xy2segvert() or ptshp2segvert().
+
+
+
+# transforming coordenates to UTM
+
+cord.dec <- SpatialPoints(cbind(coord$Longitude, coord$Latitude), proj4string=CRS("+proj=longlat"))
+cord.UTM <- spTransform(cord.dec, CRS("+proj=utm +zone=22 +south=T +ellps=WGS84"))
+
+#plot(C)
+C<-buildsegroutes(C) 	# built a list that has information about the 
+				# segments connecting the segment i with the river mouth (segment 104)
+				# see C$segroutes
+
+#points(cord.UTM)
+
+#find the network coordinates (segment,subvertice)
+#the function find the nearest subvertice SV from the network 
+#and give us the coordinates (S,SV) where SV is in segment S.
+
+coordriv<-xy2segvert(x=cord.UTM$coords.x1,y=cord.UTM$coords.x2,rivers=C)
+#riverpoints(seg=coordriv$seg, vert=coordriv$vert, rivers=C, pch=15, 
+#            col="blue")
+
+#distance matrix of the sampling sites
+disbetriv<-riverdistancemat(seg=coordriv$seg, vert=coordriv$vert, rivers=C,stopiferror=TRUE,
+                            algorithm="Dijkstra")
+
+#write.table(disbetriv,file="dist.rivTL.txt",sep="\t")
+
+#disbetriv
+
+disbetriv<-read.table("dist.rivTL.txt",header=T,sep="\t")
+
+## spatial eigenvectors
+
+abu<-dados[,8:99]
+abuH<-decostand(abu,"hellinger")
+
+pcnm.s<-pcnm(disbetriv)
+all.spatial<-pcnm.s$vectors
+
+
+## forward selection 
+
+rda.s<-rda(abuH~all.spatial)
+#anova(rda.s)
+R2adj<-RsquareAdj(rda.s)$adj.r.squared
+fsels<-forward.sel(abuH,all.spatial,adjR2thresh=R2adj,nperm=999)
+#names(fsels)
+vspatial.p<-all.spatial[,fsels$variables]
+
+#anova(rda(abuH ~ vspatial.p))
+
+vspatial<-cbind(vspatial.p[,1:3],vspatial.p[,8],vspatial.p[,6],
+			vspatial.p[,4],vspatial.p[,5],vspatial.p[,7],vspatial.p[,9])
+colnames(vspatial)<-c("PCNM1","PCNM2","PCNM4","PCNM6","PCNM8","PCNM9","PCNM10"
+				,"PCNM22","PCNM29")
+
+vspatial # 9 spatial eigenvectors
+
+broad<-vspatial[,1:7]
+fine<-vspatial[,8:9]
+
+#anova(rda(abuH ~ vspatial))
+#RsquareAdj(rda(abuH ~ vspatial))$adj.r.squared
+
+
+## connectivity (dams)
+
+#library(rgdal)
+
+#reading the dams located in google earth pro (it works!)
+
+#dams<-readOGR("damsUTM.kml") 
+#dams<-data.frame(dams@data,data.frame(dams@coords[,1:2])) # (Works!)
+
+#dams also could be imported
+
+setwd("C:/Users/OMAR/Dropbox/tese D - Omar/Dados/analise cap 1/")
+dams<-read.table("damscoord.txt",sep="\t",header=T)
+dams<-dams[-c(4,9),] 	# retire two dam beacuse not affect the dispersal
+				# dams object coordinates of 22 dams
+
+#calculating the UTM coordinates of the 22 dams
+
+cord.decdam <- SpatialPoints(cbind(dams$coords.x1, dams$coords.x2), proj4string=CRS("+proj=longlat"))
+cord.UTMdam <- spTransform(cord.decdam, CRS("+proj=utm +zone=22 +south=T +ellps=WGS84"))
+
+#points(cord.UTMdam)
+
+# transformations of C that facility compute the AEMs.
+
+D<-sequenceverts(C)
+suD.conec<-calculateconnections(D$lines,D$tolerance)
+#E<-cleanup_verts(D)
+E<-D
+F<-E
+
+## Calculating the E matrix (BME object) of Blanchet et al 2011
+## it is necessary to calculate the number of dams between the sampling sites
+
+coordrivnovo<-coordriv
+
+a<-as.numeric()
+for(i in 1:length(E$lines)){
+a[i]<-nrow(E$lines[[i]])
+}
+d<-length(which(coordriv$vert>1 & coordriv$vert<a[coordriv$seg]))
+
+for(i in 1:d){	# F has "vertices" and "segments"
+			# each "segment" has various "subvertices" e 
+			# "subsegments" (F$lines show the coordenates of each subvertex)
+			# this function put each sampling site into the extreme of a segment
+			# See the "splitsegmentat" function
+
+	a<-as.numeric()
+	for(i in 1:length(F$lines)){
+	a[i]<-nrow(F$lines[[i]])
+	}
+
+	b<-min(which(coordrivnovo$vert>1 & coordrivnovo$vert<a[coordrivnovo$seg]))
+	F<-splitsegmentat(coordrivnovo$seg[b],coordrivnovo$vert[b],F)
+	coordrivnovo<-xy2segvert(x=cord.UTM$coords.x1,y=cord.UTM$coords.x2,rivers=F)
+
+}
+
+#names(F)
+#F$segroutes
+
+#plot(F)
+
+## checking the segment splits to sampling sites are in the segment extremes
+
+#new coordenates of sampling sites in the new F river network 
+
+crdriv1<-xy2segvert(x=cord.UTM$coords.x1,y=cord.UTM$coords.x2,rivers=F)
+
+crdriv<-matrix(NA,ncol=2,nrow=nrow(crdriv1))
+for(i in 1:nrow(crdriv)){
+crdriv[i,]<-F$lines[[crdriv1$seg[i]]][crdriv1$vert[i],]
+}
+crdriv<-cbind(crdriv[,1],round(crdriv[,2],0)) # geographic coordinates of sampling sites 
+							    #	after to be moved to the river network 
+							    # with the xy2segvert fucntion
+
+
+a<-as.numeric()
+for(i in 1:length(F$segroutes)){
+a[i]<-length(F$segroutes[[i]])   #number of segments between the sampling sites and
+					# the river mouth
+}
+b<-cbind(a-1,a) # which segment are the sampling site (S2) and the previous (S1)
+			# where the segments that connect the sampling site and the mouth is 
+			# (S2, S1, ... , mouth segment)
+
+# checking if sampling site are in the common vertex between S1 and S2, or any other extremes
+
+# EF matrix will have the 4 pairs of coordinates of S1 and S2 segments
+# to each S2 segment from F river network
+
+ef<-matrix(NA,ncol=8,nrow=length(F$lines))
+
+for(i in 1:length(F$segroutes)){  
+
+if(i==F$mouth$mouth.seg){	# no point has to be in the "mouth" segment
+					# otherwise the ef matrix will has NA's
+					# if a sampling site is in the mouth segment
+					# we could split the mouth segment and, if
+					# it is necessary, define
+					# a new segment mouth such that no
+					# point is in the mouth segment of the river network
+ef[i,]=rep(NA,8)
+	}else{
+
+d<-F$segroutes[[i]][b[i,]]	# each sampling site have a number (1-258)
+					# if S1 and S2 have the numbers k and p
+					# d is (p,k)
+
+e<-as.matrix(F$lines[[d[1]]])
+f<-as.matrix(F$lines[[d[2]]])
+
+#segment S1=e1-e2, S2=f1-f2
+
+e1<-c(e[1,1],round(e[1,2],0))
+f1<-c(f[1,1],round(f[1,2],0))
+e2<-c(e[nrow(F$lines[[d[1]]]),1],round(e[nrow(F$lines[[d[1]]]),2],0))
+f2<-c(f[nrow(F$lines[[d[2]]]),1],round(f[nrow(F$lines[[d[2]]]),2],0))
+
+ef[i,]<-c(e1,e2,f1,f2) #explaining again, segment S1=e1-e2, S2=f1-f2
+	}
+}
+
+# EF matrix will have the 4 pairs of coordinates (of S1 and S2 segments)
+# for each S2 segment from F river network
+
+ef<-ef[crdriv1$seg,]
+
+# the sampling site "i" will be in a extreme of S2. If i is in the common
+# extreme between S1 and S2, sign[i] will be 4, otherwise (i in the another
+# extreme of S2) sing[[i] will be 2.
+
+sign<-as.numeric()
+for(i in 1:nrow(ef)){
+sign[i]<-sum(c(crdriv[i,]==ef[i,1:2],crdriv[i,]==ef[i,3:4],crdriv[i,]==ef[i,5:6],
+	crdriv[i,]==ef[i,7:8]))
+}
+sign  # all segments must be 2 and do not have NAs. We know that BME[i,]
+	# show (with 1's) the segments that connect the sampling site i with
+	# the river mouth, so the 2 value means that S2 segment (where the sampling
+	# site i is) will be considered in BME[i]. If sign vector has a element 
+	# iqual to 4, that sampling site would be in the common extreme between
+	# of S2 and S1 segments, and S2 would not be considered in BME[i].
+
+BME<-matrix(0,nrow=nrow(ef),ncol=length(F$lines))
+
+for(i in 1:nrow(ef)){
+a<-crdriv1$seg[i]
+BME[i,F$segroutes[[a]]]<-1
+}
+BME 		# E matrix of Blanchet et al 2011 (with 59 rows
+		# related to the 59 sampling sites)
+
+
+#xy2segvert function find the nearest subvertex SV (in F) of each dam
+#where SV is in the segment S. The function give us the coordinates (S, SV).
+
+coordrivdam<-xy2segvert(x=cord.UTMdam$coords.x1,y=cord.UTMdam$coords.x2,rivers=F)
+	# the maxime snap distance was 1004 meters
+#riverpoints(seg=coordrivdam$seg, vert=coordrivdam$vert, rivers=F, pch=15, 
+#            col="blue")
+
+# BMEdam give us information about the dams that are between the sampling
+# sites and the river mouth. Each BMEdam[i,] have a vector of segments 
+# where are dams between the sampling site i and the river mouth
+
+BMEdam<-BME[,coordrivdam[,1]]  
+
+# checking that dams are in the internal part of segments. It is because 
+# after the criation of F object, their segments were split such that the
+# sampling sites are in the vertex of segments. If dams is in the extremes
+# of segments, they could match with sampling sites and BMEdam might not be
+# considering some dams in the list. If any dam are in the extreme of any
+# segment, we could split and join segment artificially such that dams
+# are in the internal part of segments (the "riverdist" package has function
+# for that).
+
+nedges<-as.numeric()
+for(i in 1:length(F$lines)){
+	nedges[i]<-nrow(F$lines[[i]])
+}
+cbind(nedges[coordrivdam[,1]],coordrivdam[,2])	# checking if the first column is greater than the second
+								# that mean that dams are not in a extreme of segments
+								# dams are always in the internal part of segments
+								# (exactly in a subvertex)
+
+distdam<-dist(BMEdam,method="euclidean")^2	# distance matrix indicating the number of dams between 
+								# sampling sites. In that matrix, distance between A and B
+								# sites remove the common dams of BME related to A and B
+								# and sum the unpaired dams. It is the Euclidean distance
+								# doing magic! 
+
+weightdam<-sqrt(1-(distdam/max(distdam))^2)	# transformation to distance matrix (distdam) has Euclidean
+								# properties, mainly triangular inequality
+
+pcoadam<-pcoa(weightdam) #PCOAs
+
+## selecting PCOA's with positive spatial autocorrelation (following the example of "Moran.I" function
+## in adpespatial package)
+
+weightdist<-1/disbetriv 
+diag(weightdist)<-0
+
+# Scaled values of Moran's index
+# (observed, expected, sd, and pvalue)
+
+matrixMoran<-matrix(NA,ncol=4,nrow=ncol(pcoadam$vectors))
+for(i in 1:ncol(pcoadam$vectors)){
+matrixMoran[i,]<-as.numeric(Moran.I(pcoadam$vectors[,i],weightdist,scaled=T))
+}
+colnames(matrixMoran)<-c("obs","exp","sd","p.value")	
+
+padjust<-p.adjust(matrixMoran[,4],
+				method="holm")  	# We took the two first PCOA's with
+		  					# positive spatial autocorrelation
+							# and significative p-value
+
+## plot of Moran's Index
+
+# index of significance by colors
+
+pindex<-as.numeric()	# se foi ("2") ou nao ("1") significativo		
+for(i in 1:length(padjust)){
+if(padjust[i]<=0.05){
+pindex[i]<-2
+} else {
+pindex[i]<-1
+}
+}
+
+#xx<-c(1:nrow(matrixMoran),nrow(matrixMoran):1)
+#yy<-c(matrixMoran[,2]-1.96*matrixMoran[,3], rev(matrixMoran[,2]+1.96*matrixMoran[,3]))
+
+# plot of Moran's Index of each dam eigenvector
+
+plot(matrixMoran[,1],pch=1,col=1,xlab="dam eigenvector",type="n",ylab="Moran's index")
+#polygon(xx, yy,col = "gray", border = "grey")
+lines(matrixMoran[,1])
+points(matrixMoran[,1],pch=16,col=pindex)
+
+
+## varpart
+
+anova(rda(abuH ~ as.matrix(env.is)))  ## es significativo
+adjust<-RsquareAdj(rda(abuH ~ as.matrix(env.is)))$adj.r.squared ## 0.1235
+
+orderenv<-forward.sel(abuH,as.matrix(env.is),adjR2thresh =adjust)$order
+envsel<-env.is[,orderenv]
+
+varpart<-varpart(abuH ,as.matrix(envsel), broad, fine,  pcoadam$vectors[,1:2])
+plot(varpart)	# varpart final
+
+a1<-anova(rda(abuH,as.matrix(envsel), cbind(broad,as.matrix(fine),pcoadam$vectors[,1:2]), permutation=how(nperm=999)))
+b1<-anova(rda(abuH,broad, cbind(fine,as.matrix(envsel),pcoadam$vectors[,1:2]), permutation=how(nperm=999)))
+c1<-anova(rda(abuH,fine, cbind(broad,as.matrix(envsel),pcoadam$vectors[,1:2]), permutation=how(nperm=999)))
+d1<-anova(rda(abuH,pcoadam$vectors[,1:2],cbind(as.matrix(envsel), broad,fine),permutation=how(nperm=999))) 
+
+anova(rda(abuH,pcoadam$vectors[,1:2],permutation=how(nperm=999))) # global effect of dam factor is significative
+
+## Data S3
+
+max(envsel[,6])
+names<-c("Altitude","Mean width","pH","Mean depth","Horizontal transparency","Discharge","","")
+
+par(mfrow=c(2,3))
+
+for(i in 1:6){
+	boxplot(envsel[,i],main=names[i])
+		}
+
+## Dendrogram
+
+hc<-hclust(vegdist(abu),method = "ward.D2")
+gsp1=c(rep(2,6),rep(1,12),rep(2,24),rep(3,17)) # grupos espaciais MEM 1
+
+#plot(hc,hang=-1,cex=0.8)
+
+#hcd<-as.dendrogram(hc)
+
+#colour<-gsp1
+#nodePar<-list(lab.cex = 0.6, pch = c(NA, 19), cex = 0.7, col = colour)
+
+#png("clustersites.png",width=500,height=1000)
+
+plot(as.phylo(hc), tip.color = gsp1,
+     label.offset = 0.03, cex = 1)
+
+#dev.off()
+
+######################################################################################
+############ THE END  ################################################################
+######################################################################################
+ 
